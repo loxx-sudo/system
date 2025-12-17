@@ -28,40 +28,21 @@ class CafePOS
 
     static string currentUser = "";
     static string currentUserRole = "";
-    static bool isLoggedIn = false;
-
-    static string RECEIPT_FILE = "receipt.txt";
-    static string SALES_LOG_FILE = "sales_log.txt";
-    static string STOCK_FILE = "stock.txt";
-    static string USERS_FILE = "users.txt";
-    static string AUDIT_LOG_FILE = "audit_log.txt";
-    static string INVENTORY_LOG_FILE = "inventory_log.txt";
 
     static void Main()
-    {
-        InitializeSystem();
-        
-        if (Login())
-        {
-            RunMainProgram();
-        }
-        else
-        {
-            Console.WriteLine("\nLogin failed. Exiting system...");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
-        }
-    }
-
-    static void InitializeSystem()
     {
         Console.Clear();
         Console.WriteLine("========================================");
         Console.WriteLine("  Welcome to " + CAFE_NAME);
         Console.WriteLine("========================================");
         
-        LoadStockFromFile();
+        LoadStock();
         CreateDefaultUsers();
+
+        if (Login())
+        {
+            RunSystem();
+        }
     }
 
     static bool Login()
@@ -93,9 +74,9 @@ class CafePOS
     {
         try
         {
-            if (File.Exists(USERS_FILE))
+            if (File.Exists("users.txt"))
             {
-                string[] users = File.ReadAllLines(USERS_FILE);
+                string[] users = File.ReadAllLines("users.txt");
                 
                 for (int i = 0; i < users.Length; i++)
                 {
@@ -103,15 +84,10 @@ class CafePOS
                     
                     if (userData.Length >= 3)
                     {
-                        string fileUser = userData[0];
-                        string filePass = userData[1];
-                        string fileRole = userData[2];
-                        
-                        if (fileUser == username && filePass == password)
+                        if (userData[0] == username && userData[1] == password)
                         {
                             currentUser = username;
-                            currentUserRole = fileRole;
-                            isLoggedIn = true;
+                            currentUserRole = userData[2];
                             return true;
                         }
                     }
@@ -128,22 +104,14 @@ class CafePOS
 
     static void CreateDefaultUsers()
     {
-        if (!File.Exists(USERS_FILE))
+        if (!File.Exists("users.txt"))
         {
-            try
-            {
-                string defaultUsers = "admin,admin123,Admin\n";
-                defaultUsers += "cashier,cashier123,Cashier\n";
-                File.WriteAllText(USERS_FILE, defaultUsers);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("\n[Error] Could not create users file: " + ex.Message);
-            }
+            string defaultUsers = "admin,admin123,Admin\ncashier,cashier123,Cashier\n";
+            File.WriteAllText("users.txt", defaultUsers);
         }
     }
 
-    static void RunMainProgram()
+    static void RunSystem()
     {
         bool running = true;
 
@@ -151,13 +119,13 @@ class CafePOS
         {
             Console.Clear();
             CheckLowStock();
-            
             DisplayMainMenu();
+            
             string choice = Console.ReadLine();
             
             if (string.IsNullOrEmpty(choice))
             {
-                Console.WriteLine("\nInvalid input! Please enter a valid option.");
+                Console.WriteLine("\nInvalid input!");
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadKey();
                 continue;
@@ -213,34 +181,30 @@ class CafePOS
                     if (currentUserRole == "Admin")
                     {
                         RestockInventory();
-                        Console.WriteLine("\nPress any key to continue...");
-                        Console.ReadKey();
                     }
                     else
                     {
                         Console.WriteLine("\n✗ Access Denied! Admin only.");
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadKey();
                     }
+                    Console.WriteLine("\nPress any key to continue...");
+                    Console.ReadKey();
                     break;
 
                 case "I":
                     if (currentUserRole == "Admin")
                     {
                         ViewInventoryLog();
-                        Console.WriteLine("\nPress any key to continue...");
-                        Console.ReadKey();
                     }
                     else
                     {
                         Console.WriteLine("\n✗ Access Denied! Admin only.");
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadKey();
                     }
+                    Console.WriteLine("\nPress any key to continue...");
+                    Console.ReadKey();
                     break;
 
                 case "S":
-                    SaveStockToFile();
+                    SaveStock();
                     Console.WriteLine("\nStock saved successfully!");
                     Console.WriteLine("Press any key to continue...");
                     Console.ReadKey();
@@ -256,30 +220,26 @@ class CafePOS
                     if (currentUserRole == "Admin")
                     {
                         GenerateDailySummary();
-                        Console.WriteLine("\nPress any key to continue...");
-                        Console.ReadKey();
                     }
                     else
                     {
                         Console.WriteLine("\n✗ Access Denied! Admin only.");
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadKey();
                     }
+                    Console.WriteLine("\nPress any key to continue...");
+                    Console.ReadKey();
                     break;
 
                 case "U":
                     if (currentUserRole == "Admin")
                     {
                         ViewAuditLog();
-                        Console.WriteLine("\nPress any key to continue...");
-                        Console.ReadKey();
                     }
                     else
                     {
                         Console.WriteLine("\n✗ Access Denied! Admin only.");
-                        Console.WriteLine("Press any key to continue...");
-                        Console.ReadKey();
                     }
+                    Console.WriteLine("\nPress any key to continue...");
+                    Console.ReadKey();
                     break;
 
                 case "X":
@@ -287,7 +247,7 @@ class CafePOS
                     break;
 
                 default:
-                    Console.WriteLine("\nInvalid option! Please select from the menu.");
+                    Console.WriteLine("\nInvalid option!");
                     Console.WriteLine("Press any key to continue...");
                     Console.ReadKey();
                     break;
@@ -298,7 +258,7 @@ class CafePOS
     static void DisplayMainMenu()
     {
         Console.WriteLine("\n========== MAIN MENU ==========");
-        Console.WriteLine("Logged in as: " + currentUser + " (" + currentUserRole + ")");
+        Console.WriteLine("User: " + currentUser + " (" + currentUserRole + ")");
         Console.WriteLine("===============================");
         Console.WriteLine("[M] View Menu");
         Console.WriteLine("[O] Add Order");
@@ -402,9 +362,7 @@ class CafePOS
         string itemInput = Console.ReadLine();
         
         int itemNum;
-        bool validItem = int.TryParse(itemInput, out itemNum);
-
-        if (!validItem || itemNum < 1 || itemNum > 5)
+        if (!int.TryParse(itemInput, out itemNum) || itemNum < 1 || itemNum > 5)
         {
             Console.WriteLine("\nError: Invalid item number!");
             return;
@@ -414,9 +372,7 @@ class CafePOS
         string qtyInput = Console.ReadLine();
         
         int quantity;
-        bool validQty = int.TryParse(qtyInput, out quantity);
-
-        if (!validQty || quantity <= 0)
+        if (!int.TryParse(qtyInput, out quantity) || quantity <= 0)
         {
             Console.WriteLine("\nError: Invalid quantity!");
             return;
@@ -433,7 +389,7 @@ class CafePOS
             Console.WriteLine("\n========================================");
             Console.WriteLine("  ORDER ADDED SUCCESSFULLY!");
             Console.WriteLine("========================================");
-            LogAudit(currentUser + " added " + orderItems[orderItems.Count - 1] + " x" + quantity + " to cart");
+            LogAudit(currentUser + " added " + orderItems[orderItems.Count - 1] + " x" + quantity);
         }
     }
 
@@ -443,258 +399,525 @@ class CafePOS
         double itemPrice = 0;
         bool hasStock = false;
 
-        if (itemNum == 1)
+        switch (itemNum)
         {
-            itemName = "Coffee";
-            itemPrice = coffeePrice;
-            if (quantity <= coffeeStock)
+            case 1:
+                itemName = "Coffee";
+                itemPrice = coffeePrice;
+                if (quantity <= coffeeStock)
+                {
+                    hasStock = true;
+                    coffeeStock -= quantity;
+                }
+                break;
+
+            case 2:
+                itemName = "Tea";
+                itemPrice = teaPrice;
+                if (quantity <= teaStock)
+                {
+                    hasStock = true;
+                    teaStock -= quantity;
+                }
+                break;
+
+            case 3:
+                itemName = "Pasta";
+                itemPrice = pastaPrice;
+                if (quantity <= pastaStock)
+                {
+                    hasStock = true;
+                    pastaStock -= quantity;
+                }
+                break;
+
+            case 4:
+                itemName = "Cake";
+                itemPrice = cakePrice;
+                if (quantity <= cakeStock)
+                {
+                    hasStock = true;
+                    cakeStock -= quantity;
+                }
+                break;
+
+            case 5:
+                itemName = "Sandwich";
+                itemPrice = sandwichPrice;
+                if (quantity <= sandwichStock)
+                {
+                    hasStock = true;
+                    sandwichStock -= quantity;
+                }
+                break;
+        }
+
+        if (!hasStock)
+        {
+            Console.WriteLine("\nError: Insufficient stock!");
+            Console.WriteLine("Available stock: " + GetAvailableStock(itemNum));
+            return false;
+        }
+
+        orderItems.Add(itemName);
+        orderQuantities.Add(quantity);
+        orderPrices.Add(itemPrice);
+        
+        double lineTotal = itemPrice * quantity;
+        Console.WriteLine("\n" + itemName + " x " + quantity + " = P" + lineTotal.ToString("0.00"));
+        
+        return true;
+    }
+
+    static int GetAvailableStock(int itemNum)
+    {
+        switch (itemNum)
+        {
+            case 1: return coffeeStock;
+            case 2: return teaStock;
+            case 3: return pastaStock;
+            case 4: return cakeStock;
+            case 5: return sandwichStock;
+            default: return 0;
+        }
+    }
+
+    static void ViewCart()
+    {
+        Console.Clear();
+        Console.WriteLine("========================================");
+        Console.WriteLine("          YOUR CART");
+        Console.WriteLine("========================================");
+
+        if (orderItems.Count == 0)
+        {
+            Console.WriteLine("\nYour cart is empty!");
+        }
+        else
+        {
+            Console.WriteLine("");
+            double subtotal = DisplayCartItems();
+            Console.WriteLine("----------------------------------------");
+            Console.WriteLine("Subtotal: P" + subtotal.ToString("0.00"));
+            Console.WriteLine("");
+        }
+        Console.WriteLine("========================================");
+    }
+
+    static double DisplayCartItems()
+    {
+        double subtotal = 0;
+
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            double lineTotal = orderPrices[i] * orderQuantities[i];
+            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i] + " = P" + lineTotal.ToString("0.00"));
+            subtotal += lineTotal;
+        }
+
+        return subtotal;
+    }
+
+    static void EditCart()
+    {
+        Console.Clear();
+        Console.WriteLine("========================================");
+        Console.WriteLine("          EDIT CART ITEM");
+        Console.WriteLine("========================================");
+
+        if (orderItems.Count == 0)
+        {
+            Console.WriteLine("\nYour cart is empty!");
+            return;
+        }
+
+        Console.WriteLine("");
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i]);
+        }
+        Console.WriteLine("");
+
+        Console.Write("Enter item number to edit: ");
+        string input = Console.ReadLine();
+        
+        int itemIndex;
+        if (!int.TryParse(input, out itemIndex) || itemIndex < 1 || itemIndex > orderItems.Count)
+        {
+            Console.WriteLine("\nError: Invalid item number!");
+            return;
+        }
+
+        itemIndex--;
+
+        Console.Write("Enter new quantity (0 to remove): ");
+        string qtyInput = Console.ReadLine();
+        
+        int newQty;
+        if (!int.TryParse(qtyInput, out newQty) || newQty < 0)
+        {
+            Console.WriteLine("\nError: Invalid quantity!");
+            return;
+        }
+
+        string itemName = orderItems[itemIndex];
+        int oldQty = orderQuantities[itemIndex];
+        int qtyDiff = newQty - oldQty;
+
+        if (qtyDiff > 0)
+        {
+            if (!UpdateStock(itemName, qtyDiff, false))
             {
-                hasStock = true;
-                coffeeStock -= quantity;
+                Console.WriteLine("\nError: Insufficient stock!");
+                return;
             }
         }
-        else if (itemNum == 2)
+        else if (qtyDiff < 0)
         {
-            itemName = "Tea";
-            itemPrice = teaPrice;
-            if (quantity <= teaStock)
+            UpdateStock(itemName, Math.Abs(qtyDiff), true);
+        }
+
+        if (newQty == 0)
+        {
+            LogAudit(currentUser + " removed " + itemName + " from cart");
+            orderItems.RemoveAt(itemIndex);
+            orderQuantities.RemoveAt(itemIndex);
+            orderPrices.RemoveAt(itemIndex);
+            Console.WriteLine("\n✓ Item removed from cart!");
+        }
+        else
+        {
+            LogAudit(currentUser + " edited " + itemName + " quantity from " + oldQty + " to " + newQty);
+            orderQuantities[itemIndex] = newQty;
+            Console.WriteLine("\n✓ Quantity updated successfully!");
+        }
+    }
+
+    static bool UpdateStock(string itemName, int quantity, bool addBack)
+    {
+        switch (itemName)
+        {
+            case "Coffee":
+                if (!addBack && quantity > coffeeStock) return false;
+                coffeeStock = addBack ? coffeeStock + quantity : coffeeStock - quantity;
+                break;
+
+            case "Tea":
+                if (!addBack && quantity > teaStock) return false;
+                teaStock = addBack ? teaStock + quantity : teaStock - quantity;
+                break;
+
+            case "Pasta":
+                if (!addBack && quantity > pastaStock) return false;
+                pastaStock = addBack ? pastaStock + quantity : pastaStock - quantity;
+                break;
+
+            case "Cake":
+                if (!addBack && quantity > cakeStock) return false;
+                cakeStock = addBack ? cakeStock + quantity : cakeStock - quantity;
+                break;
+
+            case "Sandwich":
+                if (!addBack && quantity > sandwichStock) return false;
+                sandwichStock = addBack ? sandwichStock + quantity : sandwichStock - quantity;
+                break;
+        }
+
+        return true;
+    }
+
+    static void RemoveFromCart()
+    {
+        Console.Clear();
+        Console.WriteLine("========================================");
+        Console.WriteLine("        REMOVE FROM CART");
+        Console.WriteLine("========================================");
+
+        if (orderItems.Count == 0)
+        {
+            Console.WriteLine("\nYour cart is empty!");
+            return;
+        }
+
+        Console.WriteLine("");
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i]);
+        }
+        Console.WriteLine("");
+
+        Console.Write("Enter item number to remove: ");
+        string input = Console.ReadLine();
+        
+        int itemIndex;
+        if (!int.TryParse(input, out itemIndex) || itemIndex < 1 || itemIndex > orderItems.Count)
+        {
+            Console.WriteLine("\nError: Invalid item number!");
+            return;
+        }
+
+        itemIndex--;
+
+        string itemName = orderItems[itemIndex];
+        int qty = orderQuantities[itemIndex];
+
+        UpdateStock(itemName, qty, true);
+
+        LogAudit(currentUser + " removed " + itemName + " x" + qty + " from cart");
+
+        orderItems.RemoveAt(itemIndex);
+        orderQuantities.RemoveAt(itemIndex);
+        orderPrices.RemoveAt(itemIndex);
+
+        Console.WriteLine("\n✓ Item removed from cart!");
+    }
+
+    static void CancelOrder()
+    {
+        Console.Clear();
+        Console.WriteLine("========================================");
+        Console.WriteLine("          CANCEL ORDER");
+        Console.WriteLine("========================================");
+
+        if (orderItems.Count == 0)
+        {
+            Console.WriteLine("\nNo active order to cancel!");
+            return;
+        }
+
+        Console.WriteLine("\nAre you sure you want to cancel this order?");
+        Console.Write("Confirm (Y/N): ");
+        
+        string confirm = Console.ReadLine();
+        
+        if (confirm != null && confirm.ToUpper() == "Y")
+        {
+            for (int i = 0; i < orderItems.Count; i++)
             {
-                hasStock = true;
-                teaStock -= quantity;
+                UpdateStock(orderItems[i], orderQuantities[i], true);
+            }
+
+            LogAudit(currentUser + " cancelled order with " + orderItems.Count + " items");
+
+            orderItems.Clear();
+            orderQuantities.Clear();
+            orderPrices.Clear();
+
+            Console.WriteLine("\n✓ Order cancelled successfully!");
+        }
+    }
+
+    static void ProcessCheckout()
+    {
+        Console.Clear();
+        
+        if (orderItems.Count == 0)
+        {
+            Console.WriteLine("========================================");
+            Console.WriteLine("          CHECKOUT");
+            Console.WriteLine("========================================");
+            Console.WriteLine("\nNo items to checkout!");
+            return;
+        }
+
+        Console.WriteLine("========================================");
+        Console.WriteLine("          CHECKOUT");
+        Console.WriteLine("========================================");
+
+        double subtotal = CalculateTotal();
+        double vat = subtotal * 0.12;
+        double grandTotal = subtotal + vat;
+
+        Console.WriteLine("");
+        Console.WriteLine("Subtotal:     P" + subtotal.ToString("0.00"));
+        Console.WriteLine("VAT (12%):    P" + vat.ToString("0.00"));
+        Console.WriteLine("----------------------------------------");
+        Console.WriteLine("GRAND TOTAL:  P" + grandTotal.ToString("0.00"));
+
+        double payment = GetPayment(grandTotal);
+        double change = payment - grandTotal;
+
+        PrintReceipt(subtotal, vat, grandTotal, payment, change);
+        SaveReceipt(subtotal, vat, grandTotal, payment, change);
+        SaveSale(subtotal, vat, grandTotal);
+        SaveStock();
+        
+        LogAudit(currentUser + " completed checkout - Total: P" + grandTotal.ToString("0.00"));
+
+        Console.Write("\nStart new order? (Y/N): ");
+        string newOrder = Console.ReadLine();
+        
+        if (newOrder != null && newOrder.ToUpper() == "Y")
+        {
+            orderItems.Clear();
+            orderQuantities.Clear();
+            orderPrices.Clear();
+            Console.WriteLine("\n✓ New order started!");
+        }
+        else
+        {
+            orderItems.Clear();
+            orderQuantities.Clear();
+            orderPrices.Clear();
+        }
+    }
+
+    static double CalculateTotal()
+    {
+        double total = 0;
+
+        for (int i = 0; i < orderItems.Count; i++)
+        {
+            total += orderPrices[i] * orderQuantities[i];
+        }
+
+        return total;
+    }
+
+    static double GetPayment(double grandTotal)
+    {
+        while (true)
+        {
+            Console.Write("\nEnter payment amount: P");
+            string paymentInput = Console.ReadLine();
+            
+            double payment;
+            if (double.TryParse(paymentInput, out payment))
+            {
+                if (payment >= grandTotal)
+                {
+                    return payment;
+                }
+                else
+                {
+                    double shortage = grandTotal - payment;
+                    Console.WriteLine("\nInsufficient payment!");
+                    Console.WriteLine("Amount needed: P" + shortage.ToString("0.00") + " more");
+                }
+            }
+            else
+            {
+                Console.WriteLine("\nError: Invalid payment amount!");
             }
         }
-        else if (itemNum == 3)
+    }
+
+    static void PrintReceipt(double subtotal, double vat, double grandTotal, double payment, double change)
+    {
+        Console.Clear();
+        Console.WriteLine("\n========================================");
+        Console.WriteLine("        OFFICIAL RECEIPT");
+        Console.WriteLine("========================================");
+        Console.WriteLine(CAFE_NAME);
+        Console.WriteLine(CAFE_ADDRESS);
+        Console.WriteLine(CAFE_CONTACT);
+        Console.WriteLine(CAFE_TIN);
+        Console.WriteLine("========================================");
+        Console.WriteLine("Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt"));
+        Console.WriteLine("Cashier: " + currentUser);
+        Console.WriteLine("========================================\n");
+
+        for (int i = 0; i < orderItems.Count; i++)
         {
-            itemName = "Pasta";
-            itemPrice = pastaPrice;
-            if (quantity <= pastaStock)
-            {
-                hasStock = true;
-                pastaStock -= quantity;
-            }
+            Console.WriteLine(orderItems[i] + " x" + orderQuantities[i]);
+            Console.WriteLine("  P" + (orderPrices[i] * orderQuantities[i]).ToString("0.00"));
         }
-        else if (itemNum == 4)
+
+        Console.WriteLine("\n----------------------------------------");
+        Console.WriteLine("Subtotal:     P" + subtotal.ToString("0.00"));
+        Console.WriteLine("VAT (12%):    P" + vat.ToString("0.00"));
+        Console.WriteLine("----------------------------------------");
+        Console.WriteLine("GRAND TOTAL:  P" + grandTotal.ToString("0.00"));
+        Console.WriteLine("Payment:      P" + payment.ToString("0.00"));
+        Console.WriteLine("Change:       P" + change.ToString("0.00"));
+        Console.WriteLine("========================================");
+        Console.WriteLine("    Thank you for your purchase!");
+        Console.WriteLine("       Please come again!");
+        Console.WriteLine("========================================\n");
+    }
+
+    static void RestockInventory()
+    {
+        Console.Clear();
+        Console.WriteLine("========================================");
+        Console.WriteLine("        RESTOCK INVENTORY");
+        Console.WriteLine("========================================");
+        Console.WriteLine("\nCurrent Stock:");
+        Console.WriteLine("  1. Coffee:   " + coffeeStock + " units");
+        Console.WriteLine("  2. Tea:      " + teaStock + " units");
+        Console.WriteLine("  3. Pasta:    " + pastaStock + " units");
+        Console.WriteLine("  4. Cake:     " + cakeStock + " units");
+        Console.WriteLine("  5. Sandwich: " + sandwichStock + " units");
+        Console.WriteLine("========================================");
+
+        Console.Write("\nEnter item number (1-5): ");
+        string itemInput = Console.ReadLine();
+        
+        int itemNum;
+        if (!int.TryParse(itemInput, out itemNum) || itemNum < 1 || itemNum > 5)
         {
-            itemName = "Cake";
-            oldStock = cakeStock;
-            cakeStock += quantity;
-            newStock = cakeStock;
+            Console.WriteLine("\nError: Invalid item number!");
+            return;
         }
-        else if (itemNum == 5)
+
+        Console.Write("Enter quantity to add: ");
+        string qtyInput = Console.ReadLine();
+        
+        int quantity;
+        if (!int.TryParse(qtyInput, out quantity) || quantity <= 0)
         {
-            itemName = "Sandwich";
-            oldStock = sandwichStock;
-            sandwichStock += quantity;
-            newStock = sandwichStock;
+            Console.WriteLine("\nError: Invalid quantity!");
+            return;
+        }
+
+        string itemName = "";
+        int oldStock = 0;
+        int newStock = 0;
+
+        switch (itemNum)
+        {
+            case 1:
+                itemName = "Coffee";
+                oldStock = coffeeStock;
+                coffeeStock += quantity;
+                newStock = coffeeStock;
+                break;
+
+            case 2:
+                itemName = "Tea";
+                oldStock = teaStock;
+                teaStock += quantity;
+                newStock = teaStock;
+                break;
+
+            case 3:
+                itemName = "Pasta";
+                oldStock = pastaStock;
+                pastaStock += quantity;
+                newStock = pastaStock;
+                break;
+
+            case 4:
+                itemName = "Cake";
+                oldStock = cakeStock;
+                cakeStock += quantity;
+                newStock = cakeStock;
+                break;
+
+            case 5:
+                itemName = "Sandwich";
+                oldStock = sandwichStock;
+                sandwichStock += quantity;
+                newStock = sandwichStock;
+                break;
         }
 
         Console.WriteLine("\n✓ Stock updated successfully!");
         Console.WriteLine(itemName + ": " + oldStock + " → " + newStock + " units");
         
-        LogInventoryChange(itemName, quantity, "Restocked", currentUser);
+        LogInventory(itemName, quantity, "Restocked");
         LogAudit(currentUser + " restocked " + itemName + " +" + quantity + " units");
-        SaveStockToFile();
-    }
-
-    static void LogInventoryChange(string itemName, int quantity, string action, string user)
-    {
-        try
-        {
-            string logEntry = DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + " | ";
-            logEntry += action + " | " + itemName + " | ";
-            logEntry += (action == "Restocked" ? "+" : "-") + quantity + " units | ";
-            logEntry += "By: " + user + "\n";
-
-            File.AppendAllText(INVENTORY_LOG_FILE, logEntry);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to log inventory: " + ex.Message);
-        }
-    }
-
-    static void ViewInventoryLog()
-    {
-        Console.Clear();
-        
-        try
-        {
-            if (File.Exists(INVENTORY_LOG_FILE))
-            {
-                Console.WriteLine("========================================");
-                Console.WriteLine("       INVENTORY MOVEMENT LOG");
-                Console.WriteLine("========================================\n");
-                string logContent = File.ReadAllText(INVENTORY_LOG_FILE);
-                Console.WriteLine(logContent);
-            }
-            else
-            {
-                Console.WriteLine("========================================");
-                Console.WriteLine("       INVENTORY MOVEMENT LOG");
-                Console.WriteLine("========================================");
-                Console.WriteLine("\nNo inventory records found yet!");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to read inventory log: " + ex.Message);
-        }
-    }
-
-    static void SaveReceiptToFile(double subtotal, double vat, double grandTotal, double payment, double change)
-    {
-        try
-        {
-            string receipt = "========================================\n";
-            receipt += "        OFFICIAL RECEIPT\n";
-            receipt += "========================================\n";
-            receipt += CAFE_NAME + "\n";
-            receipt += CAFE_ADDRESS + "\n";
-            receipt += CAFE_CONTACT + "\n";
-            receipt += CAFE_TIN + "\n";
-            receipt += "========================================\n";
-            receipt += "Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
-            receipt += "Cashier: " + currentUser + "\n";
-            receipt += "========================================\n\n";
-
-            for (int i = 0; i < orderItems.Count; i++)
-            {
-                receipt += orderItems[i] + " x" + orderQuantities[i] + "\n";
-                receipt += "  P" + (orderPrices[i] * orderQuantities[i]).ToString("0.00") + "\n";
-            }
-
-            receipt += "\n----------------------------------------\n";
-            receipt += "Subtotal:     P" + subtotal.ToString("0.00") + "\n";
-            receipt += "VAT (12%):    P" + vat.ToString("0.00") + "\n";
-            receipt += "----------------------------------------\n";
-            receipt += "GRAND TOTAL:  P" + grandTotal.ToString("0.00") + "\n";
-            receipt += "Payment:      P" + payment.ToString("0.00") + "\n";
-            receipt += "Change:       P" + change.ToString("0.00") + "\n";
-            receipt += "========================================\n";
-            receipt += "    Thank you for your purchase!\n";
-            receipt += "       Please come again!\n";
-            receipt += "========================================\n";
-
-            File.WriteAllText(RECEIPT_FILE, receipt);
-            Console.WriteLine("[Receipt saved: " + Path.GetFullPath(RECEIPT_FILE) + "]");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to save receipt: " + ex.Message);
-        }
-    }
-
-    static void SaveSalesLog(double subtotal, double vat, double grandTotal)
-    {
-        try
-        {
-            string logEntry = "\n========================================\n";
-            logEntry += "          SALE RECORD\n";
-            logEntry += "========================================\n";
-            logEntry += "Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
-            logEntry += "Cashier: " + currentUser + "\n";
-            logEntry += "----------------------------------------\n";
-            logEntry += "Subtotal:     P" + subtotal.ToString("0.00") + "\n";
-            logEntry += "VAT (12%):    P" + vat.ToString("0.00") + "\n";
-            logEntry += "Grand Total:  P" + grandTotal.ToString("0.00") + "\n";
-            logEntry += "----------------------------------------\n";
-            logEntry += "Items Sold:\n";
-
-            for (int i = 0; i < orderItems.Count; i++)
-            {
-                logEntry += "  - " + orderItems[i] + " x " + orderQuantities[i] + "\n";
-            }
-
-            logEntry += "========================================\n";
-
-            File.AppendAllText(SALES_LOG_FILE, logEntry);
-            Console.WriteLine("[Sale logged: " + Path.GetFullPath(SALES_LOG_FILE) + "]");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to save sales log: " + ex.Message);
-        }
-    }
-
-    static void SaveStockToFile()
-    {
-        try
-        {
-            string stockData = "========================================\n";
-            stockData += "        CURRENT INVENTORY\n";
-            stockData += "========================================\n";
-            stockData += "Coffee:       " + coffeeStock + " units\n";
-            stockData += "Tea:          " + teaStock + " units\n";
-            stockData += "Pasta:        " + pastaStock + " units\n";
-            stockData += "Cake:         " + cakeStock + " units\n";
-            stockData += "Sandwich:     " + sandwichStock + " units\n";
-            stockData += "========================================\n";
-            stockData += "Last Updated: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
-            stockData += "========================================\n";
-
-            File.WriteAllText(STOCK_FILE, stockData);
-            Console.WriteLine("[Stock saved: " + Path.GetFullPath(STOCK_FILE) + "]");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to save stock: " + ex.Message);
-        }
-    }
-
-    static void LoadStockFromFile()
-    {
-        try
-        {
-            if (File.Exists(STOCK_FILE))
-            {
-                string[] lines = File.ReadAllLines(STOCK_FILE);
-
-                if (lines.Length >= 8)
-                {
-                    coffeeStock = Convert.ToInt32(lines[3].Split(':')[1].Trim().Replace(" units", ""));
-                    teaStock = Convert.ToInt32(lines[4].Split(':')[1].Trim().Replace(" units", ""));
-                    pastaStock = Convert.ToInt32(lines[5].Split(':')[1].Trim().Replace(" units", ""));
-                    cakeStock = Convert.ToInt32(lines[6].Split(':')[1].Trim().Replace(" units", ""));
-                    sandwichStock = Convert.ToInt32(lines[7].Split(':')[1].Trim().Replace(" units", ""));
-
-                    Console.WriteLine("[Stock loaded from file]\n");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Warning] Could not load stock file: " + ex.Message);
-            Console.WriteLine("Using default stock values.\n");
-        }
-    }
-
-    static void ViewSalesLog()
-    {
-        Console.Clear();
-        
-        try
-        {
-            if (File.Exists(SALES_LOG_FILE))
-            {
-                Console.WriteLine("========================================");
-                Console.WriteLine("          SALES LOG");
-                Console.WriteLine("========================================");
-                string logContent = File.ReadAllText(SALES_LOG_FILE);
-                Console.WriteLine(logContent);
-            }
-            else
-            {
-                Console.WriteLine("========================================");
-                Console.WriteLine("          SALES LOG");
-                Console.WriteLine("========================================");
-                Console.WriteLine("\nNo sales records found yet!");
-                Console.WriteLine("Sales will be logged after checkout.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine("\n[Error] Failed to read sales log: " + ex.Message);
-        }
+        SaveStock();
     }
 
     static void GenerateDailySummary()
@@ -708,13 +931,13 @@ class CafePOS
 
         try
         {
-            if (!File.Exists(SALES_LOG_FILE))
+            if (!File.Exists("sales.txt"))
             {
                 Console.WriteLine("No sales data available yet!");
                 return;
             }
 
-            string[] lines = File.ReadAllLines(SALES_LOG_FILE);
+            string[] lines = File.ReadAllLines("sales.txt");
             string today = DateTime.Now.ToString("MM/dd/yyyy");
 
             int transactionCount = 0;
@@ -806,16 +1029,59 @@ class CafePOS
         }
     }
 
-    static void LogAudit(string action)
+    static void ViewInventoryLog()
     {
+        Console.Clear();
+        
         try
         {
-            string logEntry = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt") + " | " + action + "\n";
-            File.AppendAllText(AUDIT_LOG_FILE, logEntry);
+            if (File.Exists("inventory.txt"))
+            {
+                Console.WriteLine("========================================");
+                Console.WriteLine("       INVENTORY MOVEMENT LOG");
+                Console.WriteLine("========================================\n");
+                string logContent = File.ReadAllText("inventory.txt");
+                Console.WriteLine(logContent);
+            }
+            else
+            {
+                Console.WriteLine("========================================");
+                Console.WriteLine("       INVENTORY MOVEMENT LOG");
+                Console.WriteLine("========================================");
+                Console.WriteLine("\nNo inventory records found yet!");
+            }
         }
         catch (Exception ex)
         {
-            Console.WriteLine("\n[Error] Failed to log audit: " + ex.Message);
+            Console.WriteLine("\n[Error] Failed to read inventory log: " + ex.Message);
+        }
+    }
+
+    static void ViewSalesLog()
+    {
+        Console.Clear();
+        
+        try
+        {
+            if (File.Exists("sales.txt"))
+            {
+                Console.WriteLine("========================================");
+                Console.WriteLine("          SALES LOG");
+                Console.WriteLine("========================================");
+                string logContent = File.ReadAllText("sales.txt");
+                Console.WriteLine(logContent);
+            }
+            else
+            {
+                Console.WriteLine("========================================");
+                Console.WriteLine("          SALES LOG");
+                Console.WriteLine("========================================");
+                Console.WriteLine("\nNo sales records found yet!");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("\n[Error] Failed to read sales log: " + ex.Message);
         }
     }
 
@@ -825,12 +1091,12 @@ class CafePOS
         
         try
         {
-            if (File.Exists(AUDIT_LOG_FILE))
+            if (File.Exists("audit.txt"))
             {
                 Console.WriteLine("========================================");
                 Console.WriteLine("           AUDIT LOG");
                 Console.WriteLine("========================================\n");
-                string logContent = File.ReadAllText(AUDIT_LOG_FILE);
+                string logContent = File.ReadAllText("audit.txt");
                 Console.WriteLine(logContent);
             }
             else
@@ -847,11 +1113,134 @@ class CafePOS
         }
     }
 
-    static void ResetOrders()
+    static void SaveReceipt(double subtotal, double vat, double grandTotal, double payment, double change)
     {
-        orderItems.Clear();
-        orderQuantities.Clear();
-        orderPrices.Clear();
+        try
+        {
+            string receipt = "========================================\n";
+            receipt += "        OFFICIAL RECEIPT\n";
+            receipt += "========================================\n";
+            receipt += CAFE_NAME + "\n";
+            receipt += CAFE_ADDRESS + "\n";
+            receipt += CAFE_CONTACT + "\n";
+            receipt += CAFE_TIN + "\n";
+            receipt += "========================================\n";
+            receipt += "Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
+            receipt += "Cashier: " + currentUser + "\n";
+            receipt += "========================================\n\n";
+
+            for (int i = 0; i < orderItems.Count; i++)
+            {
+                receipt += orderItems[i] + " x" + orderQuantities[i] + "\n";
+                receipt += "  P" + (orderPrices[i] * orderQuantities[i]).ToString("0.00") + "\n";
+            }
+
+            receipt += "\n----------------------------------------\n";
+            receipt += "Subtotal:     P" + subtotal.ToString("0.00") + "\n";
+            receipt += "VAT (12%):    P" + vat.ToString("0.00") + "\n";
+            receipt += "----------------------------------------\n";
+            receipt += "GRAND TOTAL:  P" + grandTotal.ToString("0.00") + "\n";
+            receipt += "Payment:      P" + payment.ToString("0.00") + "\n";
+            receipt += "Change:       P" + change.ToString("0.00") + "\n";
+            receipt += "========================================\n";
+
+            File.WriteAllText("receipt.txt", receipt);
+        }
+        catch { }
+    }
+
+    static void SaveSale(double subtotal, double vat, double grandTotal)
+    {
+        try
+        {
+            string logEntry = "\n========================================\n";
+            logEntry += "          SALE RECORD\n";
+            logEntry += "========================================\n";
+            logEntry += "Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
+            logEntry += "Cashier: " + currentUser + "\n";
+            logEntry += "----------------------------------------\n";
+            logEntry += "Subtotal:     P" + subtotal.ToString("0.00") + "\n";
+            logEntry += "VAT (12%):    P" + vat.ToString("0.00") + "\n";
+            logEntry += "Grand Total:  P" + grandTotal.ToString("0.00") + "\n";
+            logEntry += "----------------------------------------\n";
+            logEntry += "Items Sold:\n";
+
+            for (int i = 0; i < orderItems.Count; i++)
+            {
+                logEntry += "  - " + orderItems[i] + " x " + orderQuantities[i] + "\n";
+            }
+
+            logEntry += "========================================\n";
+
+            File.AppendAllText("sales.txt", logEntry);
+        }
+        catch { }
+    }
+
+    static void SaveStock()
+    {
+        try
+        {
+            string stockData = "========================================\n";
+            stockData += "        CURRENT INVENTORY\n";
+            stockData += "========================================\n";
+            stockData += "Coffee:       " + coffeeStock + " units\n";
+            stockData += "Tea:          " + teaStock + " units\n";
+            stockData += "Pasta:        " + pastaStock + " units\n";
+            stockData += "Cake:         " + cakeStock + " units\n";
+            stockData += "Sandwich:     " + sandwichStock + " units\n";
+            stockData += "========================================\n";
+            stockData += "Last Updated: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + "\n";
+            stockData += "========================================\n";
+
+            File.WriteAllText("stock.txt", stockData);
+        }
+        catch { }
+    }
+
+    static void LoadStock()
+    {
+        try
+        {
+            if (File.Exists("stock.txt"))
+            {
+                string[] lines = File.ReadAllLines("stock.txt");
+
+                if (lines.Length >= 8)
+                {
+                    coffeeStock = Convert.ToInt32(lines[3].Split(':')[1].Trim().Replace(" units", ""));
+                    teaStock = Convert.ToInt32(lines[4].Split(':')[1].Trim().Replace(" units", ""));
+                    pastaStock = Convert.ToInt32(lines[5].Split(':')[1].Trim().Replace(" units", ""));
+                    cakeStock = Convert.ToInt32(lines[6].Split(':')[1].Trim().Replace(" units", ""));
+                    sandwichStock = Convert.ToInt32(lines[7].Split(':')[1].Trim().Replace(" units", ""));
+
+                    Console.WriteLine("[Stock loaded from file]\n");
+                }
+            }
+        }
+        catch { }
+    }
+
+    static void LogInventory(string itemName, int quantity, string action)
+    {
+        try
+        {
+            string logEntry = DateTime.Now.ToString("MM/dd/yyyy hh:mm tt") + " | ";
+            logEntry += action + " | " + itemName + " | +" + quantity + " | By: " + currentUser + "\n";
+
+            File.AppendAllText("inventory.txt", logEntry);
+        }
+        catch { }
+    }
+
+    static void LogAudit(string action)
+    {
+        try
+        {
+            string logEntry = DateTime.Now.ToString("MM/dd/yyyy hh:mm:ss tt") + " | " + action + "\n";
+            File.AppendAllText("audit.txt", logEntry);
+        }
+        catch { }
     }
 
     static bool ExitSystem()
@@ -861,10 +1250,9 @@ class CafePOS
         Console.WriteLine("        CLOSING SYSTEM");
         Console.WriteLine("========================================");
         
-        SaveStockToFile();
+        SaveStock();
         LogAudit(currentUser + " logged out");
         
-        Console.WriteLine("\n[Stock automatically saved]");
         Console.WriteLine("\nThank you for using Cafe POS!");
         Console.WriteLine("Goodbye!\n");
         Console.WriteLine("========================================");
@@ -873,486 +1261,4 @@ class CafePOS
         Console.ReadKey();
         return false;
     }
-}Cake";
-            itemPrice = cakePrice;
-            if (quantity <= cakeStock)
-            {
-                hasStock = true;
-                cakeStock -= quantity;
-            }
-        }
-        else if (itemNum == 5)
-        {
-            itemName = "Sandwich";
-            itemPrice = sandwichPrice;
-            if (quantity <= sandwichStock)
-            {
-                hasStock = true;
-                sandwichStock -= quantity;
-            }
-        }
-
-        if (!hasStock)
-        {
-            Console.WriteLine("\nError: Insufficient stock!");
-            Console.WriteLine("Available stock: " + GetAvailableStock(itemNum));
-            return false;
-        }
-
-        orderItems.Add(itemName);
-        orderQuantities.Add(quantity);
-        orderPrices.Add(itemPrice);
-        
-        double lineTotal = itemPrice * quantity;
-        Console.WriteLine("\n" + itemName + " x " + quantity + " = P" + lineTotal.ToString("0.00"));
-        
-        return true;
-    }
-
-    static int GetAvailableStock(int itemNum)
-    {
-        if (itemNum == 1) return coffeeStock;
-        if (itemNum == 2) return teaStock;
-        if (itemNum == 3) return pastaStock;
-        if (itemNum == 4) return cakeStock;
-        if (itemNum == 5) return sandwichStock;
-        return 0;
-    }
-
-    static void ViewCart()
-    {
-        Console.Clear();
-        Console.WriteLine("========================================");
-        Console.WriteLine("          YOUR CART");
-        Console.WriteLine("========================================");
-
-        if (orderItems.Count == 0)
-        {
-            Console.WriteLine("\nYour cart is empty!");
-            Console.WriteLine("Please add items to your order.");
-        }
-        else
-        {
-            Console.WriteLine("");
-            double subtotal = DisplayCartItems();
-            Console.WriteLine("----------------------------------------");
-            Console.WriteLine("Subtotal: P" + subtotal.ToString("0.00"));
-            Console.WriteLine("");
-        }
-        Console.WriteLine("========================================");
-    }
-
-    static double DisplayCartItems()
-    {
-        double subtotal = 0;
-
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            double lineTotal = orderPrices[i] * orderQuantities[i];
-            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i] + " = P" + lineTotal.ToString("0.00"));
-            subtotal += lineTotal;
-        }
-
-        return subtotal;
-    }
-
-    static void EditCart()
-    {
-        Console.Clear();
-        Console.WriteLine("========================================");
-        Console.WriteLine("          EDIT CART ITEM");
-        Console.WriteLine("========================================");
-
-        if (orderItems.Count == 0)
-        {
-            Console.WriteLine("\nYour cart is empty!");
-            return;
-        }
-
-        Console.WriteLine("");
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i]);
-        }
-        Console.WriteLine("");
-
-        Console.Write("Enter item number to edit: ");
-        string input = Console.ReadLine();
-        
-        int itemIndex;
-        bool valid = int.TryParse(input, out itemIndex);
-
-        if (!valid || itemIndex < 1 || itemIndex > orderItems.Count)
-        {
-            Console.WriteLine("\nError: Invalid item number!");
-            return;
-        }
-
-        itemIndex--;
-
-        Console.Write("Enter new quantity (0 to remove): ");
-        string qtyInput = Console.ReadLine();
-        
-        int newQty;
-        bool validQty = int.TryParse(qtyInput, out newQty);
-
-        if (!validQty || newQty < 0)
-        {
-            Console.WriteLine("\nError: Invalid quantity!");
-            return;
-        }
-
-        string itemName = orderItems[itemIndex];
-        int oldQty = orderQuantities[itemIndex];
-        int qtyDiff = newQty - oldQty;
-
-        if (qtyDiff > 0)
-        {
-            if (!CheckAndUpdateStock(itemName, qtyDiff, false))
-            {
-                Console.WriteLine("\nError: Insufficient stock!");
-                return;
-            }
-        }
-        else if (qtyDiff < 0)
-        {
-            CheckAndUpdateStock(itemName, Math.Abs(qtyDiff), true);
-        }
-
-        if (newQty == 0)
-        {
-            LogAudit(currentUser + " removed " + itemName + " from cart");
-            orderItems.RemoveAt(itemIndex);
-            orderQuantities.RemoveAt(itemIndex);
-            orderPrices.RemoveAt(itemIndex);
-            Console.WriteLine("\n✓ Item removed from cart!");
-        }
-        else
-        {
-            LogAudit(currentUser + " edited " + itemName + " quantity from " + oldQty + " to " + newQty);
-            orderQuantities[itemIndex] = newQty;
-            Console.WriteLine("\n✓ Quantity updated successfully!");
-        }
-    }
-
-    static bool CheckAndUpdateStock(string itemName, int quantity, bool addBack)
-    {
-        switch (itemName)
-        {
-            case "Coffee":
-                if (!addBack && quantity > coffeeStock) return false;
-                coffeeStock = addBack ? coffeeStock + quantity : coffeeStock - quantity;
-                break;
-
-            case "Tea":
-                if (!addBack && quantity > teaStock) return false;
-                teaStock = addBack ? teaStock + quantity : teaStock - quantity;
-                break;
-
-            case "Pasta":
-                if (!addBack && quantity > pastaStock) return false;
-                pastaStock = addBack ? pastaStock + quantity : pastaStock - quantity;
-                break;
-
-            case "Cake":
-                if (!addBack && quantity > cakeStock) return false;
-                cakeStock = addBack ? cakeStock + quantity : cakeStock - quantity;
-                break;
-
-            case "Sandwich":
-                if (!addBack && quantity > sandwichStock) return false;
-                sandwichStock = addBack ? sandwichStock + quantity : sandwichStock - quantity;
-                break;
-        }
-
-        return true;
-    }
-
-    static void RemoveFromCart()
-    {
-        Console.Clear();
-        Console.WriteLine("========================================");
-        Console.WriteLine("        REMOVE FROM CART");
-        Console.WriteLine("========================================");
-
-        if (orderItems.Count == 0)
-        {
-            Console.WriteLine("\nYour cart is empty!");
-            return;
-        }
-
-        Console.WriteLine("");
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            Console.WriteLine("  " + (i + 1) + ". " + orderItems[i] + " x" + orderQuantities[i]);
-        }
-        Console.WriteLine("");
-
-        Console.Write("Enter item number to remove: ");
-        string input = Console.ReadLine();
-        
-        int itemIndex;
-        bool valid = int.TryParse(input, out itemIndex);
-
-        if (!valid || itemIndex < 1 || itemIndex > orderItems.Count)
-        {
-            Console.WriteLine("\nError: Invalid item number!");
-            return;
-        }
-
-        itemIndex--;
-
-        string itemName = orderItems[itemIndex];
-        int qty = orderQuantities[itemIndex];
-
-        CheckAndUpdateStock(itemName, qty, true);
-
-        LogAudit(currentUser + " removed " + itemName + " x" + qty + " from cart");
-
-        orderItems.RemoveAt(itemIndex);
-        orderQuantities.RemoveAt(itemIndex);
-        orderPrices.RemoveAt(itemIndex);
-
-        Console.WriteLine("\n✓ Item removed from cart!");
-    }
-
-    static void CancelOrder()
-    {
-        Console.Clear();
-        Console.WriteLine("========================================");
-        Console.WriteLine("          CANCEL ORDER");
-        Console.WriteLine("========================================");
-
-        if (orderItems.Count == 0)
-        {
-            Console.WriteLine("\nNo active order to cancel!");
-            return;
-        }
-
-        Console.WriteLine("\nAre you sure you want to cancel this order?");
-        Console.WriteLine("All items will be removed from cart.");
-        Console.Write("\nConfirm (Y/N): ");
-        
-        string confirm = Console.ReadLine();
-        
-        if (confirm != null && confirm.ToUpper() == "Y")
-        {
-            for (int i = 0; i < orderItems.Count; i++)
-            {
-                CheckAndUpdateStock(orderItems[i], orderQuantities[i], true);
-            }
-
-            LogAudit(currentUser + " cancelled order with " + orderItems.Count + " items");
-
-            orderItems.Clear();
-            orderQuantities.Clear();
-            orderPrices.Clear();
-
-            Console.WriteLine("\n✓ Order cancelled successfully!");
-            Console.WriteLine("All items returned to stock.");
-        }
-        else
-        {
-            Console.WriteLine("\nOrder not cancelled.");
-        }
-    }
-
-    static void ProcessCheckout()
-    {
-        Console.Clear();
-        
-        if (orderItems.Count == 0)
-        {
-            Console.WriteLine("========================================");
-            Console.WriteLine("          CHECKOUT");
-            Console.WriteLine("========================================");
-            Console.WriteLine("\nNo orders to checkout!");
-            Console.WriteLine("Please add items first.");
-            return;
-        }
-
-        Console.WriteLine("========================================");
-        Console.WriteLine("          CHECKOUT");
-        Console.WriteLine("========================================");
-
-        double totalAmount = CalculateTotal();
-        double vat = totalAmount * 0.12;
-        double grandTotal = totalAmount + vat;
-
-        Console.WriteLine("");
-        DisplayCheckoutSummary(totalAmount, vat, grandTotal);
-
-        double payment = GetPayment(grandTotal);
-        double change = payment - grandTotal;
-
-        PrintReceipt(totalAmount, vat, grandTotal, payment, change);
-
-        SaveReceiptToFile(totalAmount, vat, grandTotal, payment, change);
-        SaveSalesLog(totalAmount, vat, grandTotal);
-        SaveStockToFile();
-        
-        LogAudit(currentUser + " completed checkout - Total: P" + grandTotal.ToString("0.00"));
-
-        Console.Write("\nStart new order? (Y/N): ");
-        string newOrder = Console.ReadLine();
-        
-        if (newOrder != null && newOrder.ToUpper() == "Y")
-        {
-            ResetOrders();
-            Console.WriteLine("\n✓ New order started!");
-        }
-        else
-        {
-            ResetOrders();
-        }
-    }
-
-    static double CalculateTotal()
-    {
-        double total = 0;
-
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            total += orderPrices[i] * orderQuantities[i];
-        }
-
-        return total;
-    }
-
-    static void DisplayCheckoutSummary(double subtotal, double vat, double grandTotal)
-    {
-        Console.WriteLine("Subtotal:     P" + subtotal.ToString("0.00"));
-        Console.WriteLine("VAT (12%):    P" + vat.ToString("0.00"));
-        Console.WriteLine("----------------------------------------");
-        Console.WriteLine("GRAND TOTAL:  P" + grandTotal.ToString("0.00"));
-    }
-
-    static double GetPayment(double grandTotal)
-    {
-        double payment = 0;
-        bool validPayment = false;
-
-        Console.Write("\nEnter payment amount: P");
-        string paymentInput = Console.ReadLine();
-        
-        validPayment = double.TryParse(paymentInput, out payment);
-
-        if (!validPayment || payment < 0)
-        {
-            Console.WriteLine("\nError: Invalid payment amount!");
-            return GetPayment(grandTotal);
-        }
-
-        if (payment < grandTotal)
-        {
-            double shortage = grandTotal - payment;
-            Console.WriteLine("\nInsufficient payment!");
-            Console.WriteLine("Amount needed: P" + shortage.ToString("0.00") + " more");
-            return GetPayment(grandTotal);
-        }
-
-        return payment;
-    }
-
-    static void PrintReceipt(double subtotal, double vat, double grandTotal, double payment, double change)
-    {
-        Console.Clear();
-        Console.WriteLine("\n========================================");
-        Console.WriteLine("        OFFICIAL RECEIPT");
-        Console.WriteLine("========================================");
-        Console.WriteLine(CAFE_NAME);
-        Console.WriteLine(CAFE_ADDRESS);
-        Console.WriteLine(CAFE_CONTACT);
-        Console.WriteLine(CAFE_TIN);
-        Console.WriteLine("========================================");
-        Console.WriteLine("Date: " + DateTime.Now.ToString("MM/dd/yyyy hh:mm tt"));
-        Console.WriteLine("Cashier: " + currentUser);
-        Console.WriteLine("========================================");
-        Console.WriteLine("");
-
-        for (int i = 0; i < orderItems.Count; i++)
-        {
-            Console.WriteLine(orderItems[i] + " x" + orderQuantities[i]);
-            Console.WriteLine("  P" + (orderPrices[i] * orderQuantities[i]).ToString("0.00"));
-        }
-
-        Console.WriteLine("");
-        Console.WriteLine("----------------------------------------");
-        Console.WriteLine("Subtotal:     P" + subtotal.ToString("0.00"));
-        Console.WriteLine("VAT (12%):    P" + vat.ToString("0.00"));
-        Console.WriteLine("----------------------------------------");
-        Console.WriteLine("GRAND TOTAL:  P" + grandTotal.ToString("0.00"));
-        Console.WriteLine("Payment:      P" + payment.ToString("0.00"));
-        Console.WriteLine("Change:       P" + change.ToString("0.00"));
-        Console.WriteLine("========================================");
-        Console.WriteLine("    Thank you for your purchase!");
-        Console.WriteLine("       Please come again!");
-        Console.WriteLine("========================================\n");
-    }
-
-    static void RestockInventory()
-    {
-        Console.Clear();
-        Console.WriteLine("========================================");
-        Console.WriteLine("        RESTOCK INVENTORY");
-        Console.WriteLine("========================================");
-        Console.WriteLine("\nCurrent Stock Levels:");
-        Console.WriteLine("  1. Coffee:   " + coffeeStock + " units");
-        Console.WriteLine("  2. Tea:      " + teaStock + " units");
-        Console.WriteLine("  3. Pasta:    " + pastaStock + " units");
-        Console.WriteLine("  4. Cake:     " + cakeStock + " units");
-        Console.WriteLine("  5. Sandwich: " + sandwichStock + " units");
-        Console.WriteLine("========================================");
-
-        Console.Write("\nEnter item number (1-5): ");
-        string itemInput = Console.ReadLine();
-        
-        int itemNum;
-        bool validItem = int.TryParse(itemInput, out itemNum);
-
-        if (!validItem || itemNum < 1 || itemNum > 5)
-        {
-            Console.WriteLine("\nError: Invalid item number!");
-            return;
-        }
-
-        Console.Write("Enter quantity to add: ");
-        string qtyInput = Console.ReadLine();
-        
-        int quantity;
-        bool validQty = int.TryParse(qtyInput, out quantity);
-
-        if (!validQty || quantity <= 0)
-        {
-            Console.WriteLine("\nError: Invalid quantity!");
-            return;
-        }
-
-        string itemName = "";
-        int oldStock = 0;
-        int newStock = 0;
-
-        if (itemNum == 1)
-        {
-            itemName = "Coffee";
-            oldStock = coffeeStock;
-            coffeeStock += quantity;
-            newStock = coffeeStock;
-        }
-        else if (itemNum == 2)
-        {
-            itemName = "Tea";
-            oldStock = teaStock;
-            teaStock += quantity;
-            newStock = teaStock;
-        }
-        else if (itemNum == 3)
-        {
-            itemName = "Pasta";
-            oldStock = pastaStock;
-            pastaStock += quantity;
-            newStock = pastaStock;
-        }
-        else if (itemNum == 4)
-        {
-            itemName = "
+}
